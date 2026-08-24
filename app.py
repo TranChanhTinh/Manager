@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Hệ Thống Quản Lý Rack Kho", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Quản Lý Rack Kho - Excel Style", layout="wide", initial_sidebar_state="expanded")
 
 EXCEL_PATH = "RACK.xlsx"
 
@@ -22,106 +22,100 @@ if "current_sheet" not in st.session_state:
 if "selected_pos" not in st.session_state:
     st.session_state.selected_pos = None
 
-# 2. Tự động tiêm CSS giao diện Modern Dashboard
-custom_css = """
+# 2. CSS phong cách Microsoft Excel Classic
+excel_css = """
 <style>
-    .stApp { background-color: #0e1117; }
+    /* Nền ứng dụng màu xám sáng chuẩn Office */
+    .stApp { background-color: #f3f3f3; }
     
     section[data-testid="stSidebar"] {
-        background-color: #161b22 !important;
-        border-right: 1px solid #30363d;
+        background-color: #ffffff !important;
+        border-right: 1px solid #d1d1d1;
     }
-    
-    .kpi-card {
-        background: #1f242d;
-        border: 1px solid #30363d;
-        border-radius: 8px;
-        padding: 12px 16px;
-        color: #f0f6fc;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .kpi-title { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
-    .kpi-value { font-size: 18px; font-weight: 700; color: #58a6ff; margin-top: 2px; }
 
-    .rack-container {
-        background: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 8px;
-        padding: 16px;
+    /* Container chứa bảng Excel */
+    .excel-container {
+        background: #ffffff;
+        border: 1px solid #c8c8c8;
+        padding: 0;
         margin-top: 10px;
         overflow-x: auto;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
-    .rack-table {
+    .excel-table {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 3px;
+        border-collapse: collapse;
         table-layout: fixed;
+        font-family: "Segoe UI", Arial, sans-serif;
     }
     
-    .rack-table td {
-        border-radius: 4px;
-        padding: 8px 2px;
+    /* Đường lưới ô Excel */
+    .excel-table td, .excel-table th {
+        border: 1px solid #d4d4d4;
+        padding: 4px 2px;
         font-size: 11px;
-        font-weight: 600;
         text-align: center;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        transition: all 0.2s ease-in-out;
-        color: #c9d1d9;
-        background-color: #21262d;
-    }
-    
-    .rack-table td:hover {
-        transform: scale(1.04);
-        z-index: 10;
-        box-shadow: 0 0 8px rgba(255,255,255,0.3);
+        color: #000000;
+        background-color: #ffffff;
     }
 
-    .tang3 { background-color: #d946ef !important; color: #ffffff !important; }
-    .tang2 { background-color: #0284c7 !important; color: #ffffff !important; }
-    .tang1 { background-color: #16a34a !important; color: #ffffff !important; }
-    .khu   { background-color: #f59e0b !important; color: #ffffff !important; font-weight: 800; }
-    .empty-cell { background-color: #0d1117 !important; opacity: 0.4; }
+    /* Header tiêu đề Cột A, B, C... và Dòng 1, 2, 3... */
+    .excel-header {
+        background-color: #e6e6e6 !important;
+        color: #333333 !important;
+        font-weight: 600 !important;
+        font-size: 10px !important;
+        user-select: none;
+    }
 
+    /* Màu sắc theo phân vùng tầng / khu */
+    .tang3 { background-color: #f0aaf0 !important; color: #000000 !important; font-weight: bold; }
+    .tang2 { background-color: #82c3eb !important; color: #000000 !important; font-weight: bold; }
+    .tang1 { background-color: #64dc64 !important; color: #000000 !important; font-weight: bold; }
+    .khu   { background-color: #46b4e6 !important; color: #ffffff !important; font-weight: bold; }
+
+    /* Ô khi được tìm thấy / chọn */
     .highlight-active { 
-        background-color: #dc2626 !important; 
+        background-color: #ff0000 !important; 
         color: #ffffff !important; 
-        font-size: 12px !important; 
-        border: 2px solid #facc15 !important;
-        animation: pulse 1.2s infinite alternate;
+        font-size: 11px !important; 
+        font-weight: bold !important;
+        border: 2px solid #000000 !important;
+        animation: excel-flash 1s infinite alternate;
     }
 
-    @keyframes pulse {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-        100% { transform: scale(1.06); box-shadow: 0 0 12px 4px rgba(250, 204, 21, 0.8); }
+    @keyframes excel-flash {
+        0% { background-color: #ff0000; color: #ffffff; }
+        100% { background-color: #ffff00; color: #000000; }
     }
 </style>
 """
-st.markdown(custom_css, unsafe_allow_html=True)
+st.markdown(excel_css, unsafe_allow_html=True)
 
 # 3. Thanh bên Sidebar
-st.sidebar.markdown("<h2 style='color:#58a6ff; font-size:20px; margin-bottom:0;'>📦 TTL RACK SYSTEM</h2>", unsafe_allow_html=True)
-st.sidebar.markdown("<p style='color:#8b949e; font-size:12px;'>Hệ thống quản lý định vị kho</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='color:#107c41; margin-bottom:0;'>📊 EXCEL RACK VIEW</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='color:#666666; font-size:12px;'>Hệ thống tra cứu định vị kho</p>", unsafe_allow_html=True)
 st.sidebar.divider()
 
-# Sửa hàm callback: Sử dụng trực tiếp st.session_state.sheet_select_key
 def on_sheet_change():
     st.session_state.current_sheet = st.session_state.sheet_select_key
     st.session_state.selected_pos = None
 
 st.sidebar.selectbox(
-    "📍 Chọn Khung Rack (Sheet):", 
+    "📍 Chọn Trang (Sheet):", 
     sheets, 
     key="sheet_select_key",
     index=sheets.index(st.session_state.current_sheet),
     on_change=on_sheet_change
 )
 
-search_query = st.sidebar.text_input("🔍 Tìm nhanh mã vị trí / hàng:", value="", placeholder="Ví dụ: ML-138...").strip()
+search_query = st.sidebar.text_input("🔍 Tìm mã sản phẩm / Rack:", value="", placeholder="Ví dụ: ML-138...").strip()
 
-# 4. Thu thập dữ liệu tìm kiếm
+# 4. Tìm kiếm dữ liệu
 search_results = []
 if search_query:
     for s_name in sheets:
@@ -130,10 +124,12 @@ if search_query:
             for c in range(df_temp.shape[1]):
                 val = df_temp.iloc[r, c].strip()
                 if val and search_query.lower() in val.lower() and "tang" not in val.lower() and "khu" not in val.lower():
+                    # Chuyển đổi chỉ số cột sang dạng chữ cái Excel (A, B, C... Z, AA...)
+                    col_letter = chr(65 + c) if c < 26 else f"{chr(65 + c//26 - 1)}{chr(65 + c%26)}"
                     search_results.append({
                         "Sheet": s_name,
                         "Mã Hàng": val,
-                        "Vị trí": f"Dòng {r+1}, Cột {c+1}",
+                        "Vị trí": f"Tọa độ ({col_letter}{r+1}) - Dòng {r+1}, Cột {c+1}",
                         "row": r,
                         "col": c
                     })
@@ -150,54 +146,29 @@ if search_query:
         st.session_state.current_sheet = target["Sheet"]
         st.session_state.selected_pos = (target["row"], target["col"])
     else:
-        st.sidebar.warning("Trùng khớp 0 kết quả.")
+        st.sidebar.warning("Không tìm thấy dữ liệu khớp.")
 else:
     st.session_state.selected_pos = None
 
 # Đọc dữ liệu Sheet hiện tại
 df = load_sheet_data(st.session_state.current_sheet)
 
-# 5. Header Dashboard + KPI Cards
-total_cells = df.shape[0] * df.shape[1]
-occupied_cells = sum((df.iloc[r, c].strip() != "" and "tang" not in df.iloc[r, c].lower() and "khu" not in df.iloc[r, c].lower()) for r in range(df.shape[0]) for c in range(df.shape[1]))
+# 5. Tiêu đề hiển thị chuẩn Sheet Excel
+st.markdown(f"<h3 style='color:#107c41; margin:0;'>Sheet: #{st.session_state.current_sheet} <span style='color:#555; font-size:15px; font-weight:normal;'>({df.shape[0]}x{df.shape[1]} cells)</span></h3>", unsafe_allow_html=True)
 
-c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
+# 6. Dựng ma trận bảng tính Excel chuẩn
+html_code = "<div class='excel-container'><table class='excel-table'>"
 
-with c1:
-    st.markdown(f"<h2 style='color:#f0f6fc; margin:0;'>Sơ Đồ Rack: <span style='color:#58a6ff;'>{st.session_state.current_sheet}</span></h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='color:#8b949e; font-size:13px; margin:0;'>Kích thước: {df.shape[0]} Dòng × {df.shape[1]} Cột</p>", unsafe_allow_html=True)
+# Dòng tiêu đề Tên Cột (A, B, C, D...)
+html_code += "<tr><th class='excel-header' style='width: 35px;'></th>"
+for c in range(df.shape[1]):
+    col_letter = chr(65 + c) if c < 26 else f"{chr(65 + c//26 - 1)}{chr(65 + c%26)}"
+    html_code += f"<th class='excel-header'>{col_letter}</th>"
+html_code += "</tr>"
 
-with c2:
-    st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Tổng số ô</div>
-        <div class="kpi-value" style="color:#c9d1d9;">{total_cells}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with c3:
-    st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Số ô đã lưu trữ</div>
-        <div class="kpi-value">{occupied_cells}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with c4:
-    occupancy_rate = round((occupied_cells / total_cells) * 100, 1) if total_cells > 0 else 0
-    st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Tỷ lệ lấp đầy</div>
-        <div class="kpi-value" style="color:#2ba640;">{occupancy_rate}%</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-# 6. Dựng ma trận sơ đồ Rack
-html_code = "<div class='rack-container'><table class='rack-table'>"
+# Dựng các hàng ô dữ liệu kèm Số Dòng (1, 2, 3...)
 for r in range(df.shape[0]):
-    html_code += "<tr>"
+    html_code += f"<tr><td class='excel-header'>{r+1}</td>"
     for c in range(df.shape[1]):
         val = str(df.iloc[r, c]).strip()
         cell_class = ""
@@ -206,12 +177,11 @@ for r in range(df.shape[0]):
         elif "Tang 2" in val: cell_class = "tang2"
         elif "Tang 1" in val: cell_class = "tang1"
         elif "Khu" in val: cell_class = "khu"
-        elif not val: cell_class = "empty-cell"
         
         if st.session_state.selected_pos == (r, c):
             cell_class += " highlight-active"
 
-        disp_val = val[:10] if val else ""
+        disp_val = val if val else ""
         html_code += f"<td class='{cell_class}' title='Dòng {r+1}, Cột {c+1}: {val}'>{disp_val}</td>"
     html_code += "</tr>"
 html_code += "</table></div>"
