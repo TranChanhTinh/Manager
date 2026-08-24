@@ -134,7 +134,7 @@ cyber_css = """
 st.markdown(cyber_css, unsafe_allow_html=True)
 
 # 3. Sidebar điều hướng
-st.sidebar.markdown("<h2 style='color:#00f0ff; font-size:22px; font-weight:800; margin-bottom:0;'>⚡ RACK CYBER WMS</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("<h2 style='color:#00f0ff; font-size:22px; font-weight:800; margin-bottom:0;'>⚡ RACK CYBER TTL</h2>", unsafe_allow_html=True)
 st.sidebar.markdown("<p style='color:#768390; font-size:12px;'>Hệ thống tra cứu & định vị kho thông minh</p>", unsafe_allow_html=True)
 st.sidebar.divider()
 
