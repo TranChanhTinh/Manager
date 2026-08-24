@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 
-# Thiết lập trang tràn màn hình
 st.set_page_config(page_title="Hệ Thống Quản Lý Rack Kho", layout="wide", initial_sidebar_state="expanded")
 
 EXCEL_PATH = "RACK.xlsx"
@@ -26,16 +25,13 @@ if "selected_pos" not in st.session_state:
 # 2. Tự động tiêm CSS giao diện Modern Dashboard
 custom_css = """
 <style>
-    /* Bảng màu tối UI Chuyên nghiệp */
     .stApp { background-color: #0e1117; }
     
-    /* Tùy chỉnh thanh Sidebar */
     section[data-testid="stSidebar"] {
         background-color: #161b22 !important;
         border-right: 1px solid #30363d;
     }
     
-    /* Card thống kê KPI */
     .kpi-card {
         background: #1f242d;
         border: 1px solid #30363d;
@@ -47,7 +43,6 @@ custom_css = """
     .kpi-title { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
     .kpi-value { font-size: 18px; font-weight: 700; color: #58a6ff; margin-top: 2px; }
 
-    /* Thiết kế Bảng Rack UI */
     .rack-container {
         background: #161b22;
         border: 1px solid #30363d;
@@ -84,14 +79,12 @@ custom_css = """
         box-shadow: 0 0 8px rgba(255,255,255,0.3);
     }
 
-    /* Các phân vùng màu */
     .tang3 { background-color: #d946ef !important; color: #ffffff !important; }
     .tang2 { background-color: #0284c7 !important; color: #ffffff !important; }
     .tang1 { background-color: #16a34a !important; color: #ffffff !important; }
     .khu   { background-color: #f59e0b !important; color: #ffffff !important; font-weight: 800; }
     .empty-cell { background-color: #0d1117 !important; opacity: 0.4; }
 
-    /* Ô đang được Active / Chọn */
     .highlight-active { 
         background-color: #dc2626 !important; 
         color: #ffffff !important; 
@@ -109,12 +102,13 @@ custom_css = """
 st.markdown(custom_css, unsafe_allow_html=True)
 
 # 3. Thanh bên Sidebar
-st.sidebar.markdown("<h2 style='color:#58a6ff; font-size:20px; margin-bottom:0;'>📦 TTL RACK SYSTEM</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("<h2 style='color:#58a6ff; font-size:20px; margin-bottom:0;'>📦 WMS RACK SYSTEM</h2>", unsafe_allow_html=True)
 st.sidebar.markdown("<p style='color:#8b949e; font-size:12px;'>Hệ thống quản lý định vị kho</p>", unsafe_allow_html=True)
 st.sidebar.divider()
 
+# Sửa hàm callback: Sử dụng trực tiếp st.session_state.sheet_select_key
 def on_sheet_change():
-    st.session_state.current_sheet = st.sidebar.session_state.sheet_select_key
+    st.session_state.current_sheet = st.session_state.sheet_select_key
     st.session_state.selected_pos = None
 
 st.sidebar.selectbox(
