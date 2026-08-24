@@ -22,9 +22,10 @@ if "current_sheet" not in st.session_state:
 if "selected_pos" not in st.session_state:
     st.session_state.selected_pos = None
 
-# 2. CSS Dark Glassmorphism Cyber UI
+# 2. CSS Dark Glassmorphism & Neon UI
 cyber_css = """
 <style>
+    /* Nền đen sâu & Tùy chỉnh Sidebar */
     .stApp { background-color: #08090c; }
     
     section[data-testid="stSidebar"] {
@@ -32,6 +33,7 @@ cyber_css = """
         border-right: 1px solid #1f2430;
     }
 
+    /* Thẻ Thống Kê KPI Glassmorphism */
     .kpi-card {
         background: linear-gradient(135deg, rgba(22, 27, 38, 0.9) 0%, rgba(15, 17, 23, 0.9) 100%);
         border: 1px solid #232a3b;
@@ -43,6 +45,7 @@ cyber_css = """
     .kpi-title { font-size: 11px; color: #768390; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
     .kpi-value { font-size: 20px; font-weight: 800; color: #00f0ff; margin-top: 2px; text-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
 
+    /* Khung chứa sơ đồ Rack */
     .rack-container {
         background: #0d1117;
         border: 1px solid #21262d;
@@ -56,63 +59,63 @@ cyber_css = """
     .rack-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 3px;
+        border-spacing: 4px;
         table-layout: fixed;
-        font-family: 'JetBrains Mono', 'Segoe UI', monospace;
+        font-family: 'JetBrains Mono', 'Fira Code', 'Segoe UI', monospace;
     }
     
     .rack-table td {
-        border-radius: 4px;
-        padding: 8px 2px;
+        border-radius: 5px;
+        padding: 9px 2px;
         font-size: 11px;
         font-weight: 700;
         text-align: center;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        transition: all 0.2s ease-in-out;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         color: #8b949e;
         background-color: #161b22;
         border: 1px solid #21262d;
     }
     
     .rack-table td:hover {
-        transform: translateY(-2px) scale(1.04);
+        transform: translateY(-2px) scale(1.05);
         z-index: 50;
         box-shadow: 0 5px 15px rgba(0, 240, 255, 0.4);
         border-color: #00f0ff !important;
         color: #ffffff !important;
     }
 
-    /* Đổi dải màu Tầng 3 chuẩn Tím Neon */
+    /* Các phân vùng màu Neon sắc nét */
     .tang3 { 
         background: linear-gradient(135deg, #a21caf 0%, #c026d3 100%) !important; 
         color: #ffffff !important; 
         border: 1px solid #e879f9 !important;
+        box-shadow: 0 0 8px rgba(192, 38, 211, 0.3);
     }
     .tang2 { 
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important; 
         color: #ffffff !important; 
         border: 1px solid #38bdf8 !important;
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
     }
     .tang1 { 
         background: linear-gradient(135deg, #15803d 0%, #166534 100%) !important; 
         color: #ffffff !important; 
         border: 1px solid #4ade80 !important;
+        box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
     }
     .khu { 
         background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important; 
         color: #ffffff !important; 
         font-weight: 900; 
         border: 1px solid #fbbf24 !important;
-    }
-    .label-cell {
-        font-weight: 800 !important;
         letter-spacing: 0.5px;
-        opacity: 0.95;
     }
-    .empty-cell { background-color: #0d1117 !important; border: 1px dashed #1b1f27 !important; opacity: 0.2; }
+    .empty-cell { background-color: #0d1117 !important; border: 1px dashed #1b1f27 !important; opacity: 0.3; }
 
+    /* Hiệu ứng nhấp nháy Neon cho ô chọn */
     .highlight-active { 
         background: #ff0055 !important; 
         color: #ffffff !important; 
@@ -130,7 +133,7 @@ cyber_css = """
 """
 st.markdown(cyber_css, unsafe_allow_html=True)
 
-# 3. Sidebar
+# 3. Sidebar điều hướng
 st.sidebar.markdown("<h2 style='color:#00f0ff; font-size:22px; font-weight:800; margin-bottom:0;'>⚡ RACK CYBER WMS</h2>", unsafe_allow_html=True)
 st.sidebar.markdown("<p style='color:#768390; font-size:12px;'>Hệ thống tra cứu & định vị kho thông minh</p>", unsafe_allow_html=True)
 st.sidebar.divider()
@@ -182,6 +185,7 @@ if search_query:
 else:
     st.session_state.selected_pos = None
 
+# Đọc dữ liệu Sheet hiện tại
 df = load_sheet_data(st.session_state.current_sheet)
 
 # 5. Dashboard Stats Header
@@ -221,53 +225,24 @@ with c4:
 
 st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-# 6. Thuật toán gán Tầng chính xác ngay từ dòng bắt đầu
-row_layer_map = {}
-current_layer = ""
-
-for r in range(df.shape[0]):
-    row_text = " ".join([str(x).strip() for x in df.iloc[r, :].values]).lower()
-    
-    if "tang 3" in row_text:
-        current_layer = "tang3"
-    elif "tang 2" in row_text:
-        current_layer = "tang2"
-    elif "tang 1" in row_text:
-        current_layer = "tang1"
-    
-    row_layer_map[r] = current_layer
-
-# Dựng ma trận sơ đồ Rack
+# 6. Dựng ma trận sơ đồ Rack
 html_code = "<div class='rack-container'><table class='rack-table'>"
 for r in range(df.shape[0]):
     html_code += "<tr>"
-    row_layer = row_layer_map.get(r, "")
-    
     for c in range(df.shape[1]):
         val = str(df.iloc[r, c]).strip()
         cell_class = ""
-        disp_val = val[:10] if val else ""
         
-        # Xử lý ô Khu vực
-        if "khu" in val.lower() or "dưới đất" in val.lower():
-            cell_class = "khu"
-        # Xử lý ô ghi nhãn Tầng ở Cột 0
-        elif c == 0 and ("tang" in val.lower() or val == ""):
-            cell_class = f"{row_layer} label-cell" if row_layer else "empty-cell"
-            if "tang 3" in row_layer: disp_val = "Tang 3"
-            elif "tang 2" in row_layer: disp_val = "Tang 2"
-            elif "tang 1" in row_layer: disp_val = "Tang 1"
-        # Ô sản phẩm trong Tầng (bao gồm cả IV-322 ở Dòng 1)
-        elif val:
-            cell_class = row_layer if row_layer else "empty-cell"
-        # Ô trống
-        else:
-            cell_class = "empty-cell"
+        if "Tang 3" in val: cell_class = "tang3"
+        elif "Tang 2" in val: cell_class = "tang2"
+        elif "Tang 1" in val: cell_class = "tang1"
+        elif "Khu" in val: cell_class = "khu"
+        elif not val: cell_class = "empty-cell"
         
-        # Highlight ô tìm kiếm
         if st.session_state.selected_pos == (r, c):
             cell_class += " highlight-active"
 
+        disp_val = val[:10] if val else ""
         html_code += f"<td class='{cell_class}' title='Dòng {r+1}, Cột {c+1}: {val}'>{disp_val}</td>"
     html_code += "</tr>"
 html_code += "</table></div>"
