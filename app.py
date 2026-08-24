@@ -84,7 +84,7 @@ cyber_css = """
         color: #ffffff !important;
     }
 
-    /* Các dải màu Neon phân tầng thống nhất */
+    /* Đổi dải màu Tầng 3 chuẩn Tím Neon */
     .tang3 { 
         background: linear-gradient(135deg, #a21caf 0%, #c026d3 100%) !important; 
         color: #ffffff !important; 
@@ -221,20 +221,18 @@ with c4:
 
 st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-# 6. Thuật toán phân bổ & chuẩn hóa nhãn Tầng cho các dòng
+# 6. Thuật toán gán Tầng chính xác ngay từ dòng bắt đầu
 row_layer_map = {}
 current_layer = ""
 
 for r in range(df.shape[0]):
-    first_col_val = str(df.iloc[r, 0]).strip()
+    row_text = " ".join([str(x).strip() for x in df.iloc[r, :].values]).lower()
     
-    # Tìm nhãn tầng ở bất kỳ đâu trong dòng nếu cột 0 không có
-    row_text = " ".join([str(x).strip() for x in df.iloc[r, :].values])
-    if "tang 3" in row_text.lower():
+    if "tang 3" in row_text:
         current_layer = "tang3"
-    elif "tang 2" in row_text.lower():
+    elif "tang 2" in row_text:
         current_layer = "tang2"
-    elif "tang 1" in row_text.lower():
+    elif "tang 1" in row_text:
         current_layer = "tang1"
     
     row_layer_map[r] = current_layer
@@ -253,20 +251,20 @@ for r in range(df.shape[0]):
         # Xử lý ô Khu vực
         if "khu" in val.lower() or "dưới đất" in val.lower():
             cell_class = "khu"
-        # Xử lý ô ghi Tầng ở cột 0
+        # Xử lý ô ghi nhãn Tầng ở Cột 0
         elif c == 0 and ("tang" in val.lower() or val == ""):
             cell_class = f"{row_layer} label-cell" if row_layer else "empty-cell"
             if "tang 3" in row_layer: disp_val = "Tang 3"
             elif "tang 2" in row_layer: disp_val = "Tang 2"
             elif "tang 1" in row_layer: disp_val = "Tang 1"
-        # Ô sản phẩm nằm trong Tầng
+        # Ô sản phẩm trong Tầng (bao gồm cả IV-322 ở Dòng 1)
         elif val:
-            cell_class = row_layer
-        # Ô trống trong Tầng
+            cell_class = row_layer if row_layer else "empty-cell"
+        # Ô trống
         else:
             cell_class = "empty-cell"
         
-        # Highlight ô được tìm kiếm
+        # Highlight ô tìm kiếm
         if st.session_state.selected_pos == (r, c):
             cell_class += " highlight-active"
 
