@@ -102,7 +102,7 @@ custom_css = """
 st.markdown(custom_css, unsafe_allow_html=True)
 
 # 3. Thanh bên Sidebar
-st.sidebar.markdown("<h2 style='color:#58a6ff; font-size:20px; margin-bottom:0;'>📦 WMS RACK SYSTEM</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("<h2 style='color:#58a6ff; font-size:20px; margin-bottom:0;'>📦 TTL RACK SYSTEM</h2>", unsafe_allow_html=True)
 st.sidebar.markdown("<p style='color:#8b949e; font-size:12px;'>Hệ thống quản lý định vị kho</p>", unsafe_allow_html=True)
 st.sidebar.divider()
 
