@@ -5,11 +5,18 @@ st.set_page_config(page_title="WMS Cyber Rack Management", layout="wide", initia
 
 EXCEL_PATH = "RACK.xlsx"
 
+# Hàm đọc dữ liệu không dùng cache để luôn cập nhật tức thì khi có thao tác CRUD
 def get_excel_file():
     return pd.ExcelFile(EXCEL_PATH)
 
 def load_sheet_data(sheet_name):
     return pd.read_excel(EXCEL_PATH, sheet_name=sheet_name, header=None).fillna("").astype(str)
+
+def save_all_sheets_data(sheets_dict):
+    """Ghi đè tất cả các sheet dữ liệu vào file Excel"""
+    with pd.ExcelWriter(EXCEL_PATH, engine='openpyxl') as writer:
+        for s_name, df_data in sheets_dict.items():
+            df_data.to_excel(writer, sheet_name=s_name, index=False, header=False)
 
 xls = get_excel_file()
 sheets = xls.sheet_names
@@ -20,7 +27,7 @@ if "current_sheet" not in st.session_state:
 if "selected_pos" not in st.session_state:
     st.session_state.selected_pos = None
 
-# 2. CSS Dark Glassmorphism & Neon UI (Đã phân màu sắc Tầng rõ ràng)
+# 2. CSS Dark Glassmorphism & Neon UI
 cyber_css = """
 <style>
     .stApp { background-color: #0b0f19; }
@@ -149,7 +156,7 @@ cyber_css = """
 """
 st.markdown(cyber_css, unsafe_allow_html=True)
 
-# 3. Sidebar
+# 3. Sidebar - Điều hướng & Tìm kiếm
 st.sidebar.markdown("<h2 style='color:#38bdf8; font-size:22px; font-weight:800; margin-bottom:0;'>⚡ RACK CYBER TTL</h2>", unsafe_allow_html=True)
 st.sidebar.markdown("<p style='color:#94a3b8; font-size:12px;'>Hệ thống tra cứu & định vị kho thông minh</p>", unsafe_allow_html=True)
 st.sidebar.divider()
@@ -168,11 +175,10 @@ st.sidebar.selectbox(
 
 search_query = st.sidebar.text_input("🔍 Tìm nhanh mã vị trí / hàng:", value="", placeholder="Ví dụ: ML-138...").strip()
 
-# Đọc dữ liệu Sheet hiện tại
 df = load_sheet_data(st.session_state.current_sheet)
 
-# 4. Thuật toán xác định bản đồ Khu và Tầng cho từng tọa độ (row, col)
-zone_map = {} # Quản lý Khu theo cột
+# 4. Thuật toán xác định bản đồ Khu theo cột
+zone_map = {} 
 current_zone = ""
 for c in range(df.shape[1]):
     col_has_zone = False
@@ -182,10 +188,7 @@ for c in range(df.shape[1]):
             current_zone = val
             col_has_zone = True
             break
-    if col_has_zone:
-        zone_map[c] = current_zone
-    else:
-        zone_map[c] = current_zone
+    zone_map[c] = current_zone
 
 # 5. Tìm kiếm dữ liệu
 search_results = []
@@ -220,8 +223,66 @@ if search_query:
 else:
     st.session_state.selected_pos = None
 
-# Re-load lại Sheet nếu chọn kết quả từ sheet khác
 df = load_sheet_data(st.session_state.current_sheet)
+
+# ==========================================
+# ⚙️ MÔ-ĐỦN QUẢN LÝ TƯƠNG TÁC DỮ LIỆU REAL-TIME (CRUD)
+# ==========================================
+st.sidebar.divider()
+st.sidebar.markdown("<h3 style='color:#38bdf8; font-size:16px; margin-bottom:0;'>🛠️ Quản Lý Vị Trí / Thùng Hàng</h3>", unsafe_allow_html=True)
+
+crud_action = st.sidebar.selectbox("Thao tác:", ["Thêm / Cập nhật", "Di chuyển", "Xóa / Xuất hàng"])
+
+c_r, c_c = st.sidebar.columns(2)
+with c_r:
+    # Nếu chọn từ kết quả tìm kiếm thì gán mặc định tọa độ đó, ngược lại là Dòng 1
+    default_r = st.session_state.selected_pos[0] + 1 if st.session_state.selected_pos else 1
+    row_idx = st.number_input("Dòng (Row)", min_value=1, max_value=df.shape[0], value=default_r) - 1
+with c_c:
+    default_c = st.session_state.selected_pos[1] + 1 if st.session_state.selected_pos else 1
+    col_idx = st.number_input("Cột (Col)", min_value=1, max_value=df.shape[1], value=default_c) - 1
+
+if crud_action == "Thêm / Cập nhật":
+    current_val = df.iloc[row_idx, col_idx]
+    new_val = st.sidebar.text_input("Mã thùng / Nội dung mới:", value=current_val)
+    if st.sidebar.button("💾 Lưu Cập Nhật", use_container_width=True):
+        all_sheets = {s: load_sheet_data(s) for s in sheets}
+        all_sheets[st.session_state.current_sheet].iloc[row_idx, col_idx] = new_val
+        save_all_sheets_data(all_sheets)
+        st.sidebar.success(f"Đã cập nhật vị trí Dòng {row_idx+1}, Cột {col_idx+1}")
+        st.rerun()
+
+elif crud_action == "Di chuyển":
+    st.sidebar.caption("Di chuyển tới vị trí đích:")
+    t_sheet = st.sidebar.selectbox("Sheet đích:", sheets, index=sheets.index(st.session_state.current_sheet))
+    df_target = load_sheet_data(t_sheet)
+    
+    tc_r, tc_c = st.sidebar.columns(2)
+    with tc_r:
+        t_row = st.number_input("Dòng đích", min_value=1, max_value=df_target.shape[0], value=1) - 1
+    with tc_c:
+        t_col = st.number_input("Cột đích", min_value=1, max_value=df_target.shape[1], value=1) - 1
+        
+    if st.sidebar.button("🚚 Di Chuyển Hàng", use_container_width=True):
+        all_sheets = {s: load_sheet_data(s) for s in sheets}
+        val_to_move = all_sheets[st.session_state.current_sheet].iloc[row_idx, col_idx]
+        
+        if not val_to_move.strip():
+            st.sidebar.error("Vị trí nguồn đang trống!")
+        else:
+            all_sheets[st.session_state.current_sheet].iloc[row_idx, col_idx] = ""
+            all_sheets[t_sheet].iloc[t_row, t_col] = val_to_move
+            save_all_sheets_data(all_sheets)
+            st.sidebar.success(f"Đã chuyển '{val_to_move}' thành công!")
+            st.rerun()
+
+elif crud_action == "Xóa / Xuất hàng":
+    if st.sidebar.button("🗑️ Xuất Hàng Khỏi Vị Trí", use_container_width=True):
+        all_sheets = {s: load_sheet_data(s) for s in sheets}
+        all_sheets[st.session_state.current_sheet].iloc[row_idx, col_idx] = ""
+        save_all_sheets_data(all_sheets)
+        st.sidebar.success(f"Đã xóa hàng tại Dòng {row_idx+1}, Cột {col_idx+1}")
+        st.rerun()
 
 # 6. Dashboard Header
 total_cells = df.shape[0] * df.shape[1]
@@ -246,10 +307,9 @@ st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
 # 7. Dựng ma trận sơ đồ Rack có gắn nhãn Khu & Tầng tự động
 html_code = "<div class='rack-container'><table class='rack-table'>"
-current_tier = "" # Lưu tầng hiện tại theo chiều dọc từ trên xuống
+current_tier = "" 
 
 for r in range(df.shape[0]):
-    # Kiểm tra xem dòng này có chứa nhãn Tầng không
     row_vals = [str(df.iloc[r, c]).strip() for c in range(df.shape[1])]
     for val in row_vals:
         if "tang 3" in val.lower(): current_tier = "Tang 3"
@@ -262,7 +322,6 @@ for r in range(df.shape[0]):
         cell_class = ""
         zone_info = zone_map.get(c, "")
         
-        # Xử lý các ô Header Tầng / Khu
         if "tang 3" in val.lower(): cell_class = "lbl-tang3"
         elif "tang 2" in val.lower(): cell_class = "lbl-tang2"
         elif "tang 1" in val.lower(): cell_class = "lbl-tang1"
@@ -270,7 +329,6 @@ for r in range(df.shape[0]):
         elif not val: 
             cell_class = "empty-cell"
         else:
-            # Gán kiểu hiển thị màu sắc theo Tầng
             if current_tier == "Tang 3": cell_class = "item-tang3"
             elif current_tier == "Tang 2": cell_class = "item-tang2"
             elif current_tier == "Tang 1": cell_class = "item-tang1"
@@ -280,7 +338,6 @@ for r in range(df.shape[0]):
 
         disp_val = val[:10] if val else ""
         
-        # Tooltip đầy đủ gồm [Khu - Tầng - Tọa độ - Mã thùng]
         tooltip_text = f"{zone_info} | {current_tier} | Dòng {r+1}, Cột {c+1}"
         if val and "tang" not in val.lower() and "khu" not in val.lower():
             tooltip_text += f": {val}"
