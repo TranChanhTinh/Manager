@@ -5,16 +5,15 @@ st.set_page_config(page_title="WMS Cyber Rack Management", layout="wide", initia
 
 EXCEL_PATH = "RACK.xlsx"
 
-@st.cache_resource
+# Hàm đọc dữ liệu không dùng cache để luôn cập nhật tức thì
 def get_excel_file():
     return pd.ExcelFile(EXCEL_PATH)
 
-xls = get_excel_file()
-sheets = xls.sheet_names
-
-@st.cache_data
 def load_sheet_data(sheet_name):
     return pd.read_excel(EXCEL_PATH, sheet_name=sheet_name, header=None).fillna("").astype(str)
+
+xls = get_excel_file()
+sheets = xls.sheet_names
 
 # 1. Khởi tạo trạng thái Session
 if "current_sheet" not in st.session_state:
@@ -22,10 +21,9 @@ if "current_sheet" not in st.session_state:
 if "selected_pos" not in st.session_state:
     st.session_state.selected_pos = None
 
-# 2. CSS Dark Glassmorphism & Neon UI (Đã tăng độ sáng và tương phản)
+# 2. CSS Dark Glassmorphism & Neon UI
 cyber_css = """
 <style>
-    /* Nền đen sâu & Tùy chỉnh Sidebar */
     .stApp { background-color: #0b0f19; }
     
     section[data-testid="stSidebar"] {
@@ -33,7 +31,6 @@ cyber_css = """
         border-right: 1px solid #1f2937;
     }
 
-    /* Thẻ Thống Kê KPI Glassmorphism */
     .kpi-card {
         background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
         border: 1px solid #334155;
@@ -45,7 +42,6 @@ cyber_css = """
     .kpi-title { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
     .kpi-value { font-size: 20px; font-weight: 800; color: #38bdf8; margin-top: 2px; text-shadow: 0 0 10px rgba(56, 189, 248, 0.4); }
 
-    /* Khung chứa sơ đồ Rack */
     .rack-container {
         background: #0f172a;
         border: 1px solid #334155;
@@ -87,7 +83,6 @@ cyber_css = """
         color: #ffffff !important;
     }
 
-    /* Các phân vùng màu Neon sắc nét, sáng rõ hơn */
     .tang3 { 
         background: linear-gradient(135deg, #c026d3 0%, #a855f7 100%) !important; 
         color: #ffffff !important; 
@@ -120,7 +115,6 @@ cyber_css = """
         color: #475569 !important;
     }
 
-    /* Hiệu ứng nhấp nháy Neon cho ô chọn */
     .highlight-active { 
         background: #f43f5e !important; 
         color: #ffffff !important; 
@@ -192,6 +186,70 @@ else:
 
 # Đọc dữ liệu Sheet hiện tại
 df = load_sheet_data(st.session_state.current_sheet)
+
+# ==========================================
+# ⚙️ MÔ-ĐỦN QUẢN LÝ TƯƠNG TÁC DỮ LIỆU REAL-TIME (CRUD)
+# ==========================================
+st.sidebar.divider()
+st.sidebar.markdown("<h3 style='color:#38bdf8; font-size:16px; margin-bottom:0;'>🛠️ Quản Lý Vị Trí / Thùng Hàng</h3>", unsafe_allow_html=True)
+
+# Hàm ghi dữ liệu cập nhật vào file Excel
+def save_all_sheets_data(sheets_dict):
+    with pd.ExcelWriter(EXCEL_PATH, engine='openpyxl') as writer:
+        for s_name, df_data in sheets_dict.items():
+            df_data.to_excel(writer, sheet_name=s_name, index=False, header=False)
+
+crud_action = st.sidebar.selectbox("Thao tác:", ["Thêm / Cập nhật", "Di chuyển", "Xóa / Xuất hàng"])
+
+c_r, c_c = st.sidebar.columns(2)
+with c_r:
+    row_idx = st.number_input("Dòng (Row)", min_value=1, max_value=df.shape[0], value=1) - 1
+with c_c:
+    col_idx = st.number_input("Cột (Col)", min_value=1, max_value=df.shape[1], value=1) - 1
+
+if crud_action == "Thêm / Cập nhật":
+    current_val = df.iloc[row_idx, col_idx]
+    new_val = st.sidebar.text_input("Mã thùng / Nội dung mới:", value=current_val)
+    if st.sidebar.button("💾 Luu Cập Nhật", use_container_width=True):
+        # Đọc tất cả sheet để lưu lại toàn bộ Workbook
+        all_sheets = {s: load_sheet_data(s) for s in sheets}
+        all_sheets[st.session_state.current_sheet].iloc[row_idx, col_idx] = new_val
+        save_all_sheets_data(all_sheets)
+        st.sidebar.success(f"Đã cập nhật tại Dòng {row_idx+1}, Cột {col_idx+1}")
+        st.rerun()
+
+elif crud_action == "Di chuyển":
+    st.sidebar.caption("Di chuyển tới vị trí đích:")
+    t_sheet = st.sidebar.selectbox("Sheet đích:", sheets, index=sheets.index(st.session_state.current_sheet))
+    df_target = load_sheet_data(t_sheet)
+    
+    tc_r, tc_c = st.sidebar.columns(2)
+    with tc_r:
+        t_row = st.number_input("Dòng đích", min_value=1, max_value=df_target.shape[0], value=1) - 1
+    with tc_c:
+        t_col = st.number_input("Cột đích", min_value=1, max_value=df_target.shape[1], value=1) - 1
+        
+    if st.sidebar.button("🚚 Di Chuyển Hàng", use_container_width=True):
+        all_sheets = {s: load_sheet_data(s) for s in sheets}
+        val_to_move = all_sheets[st.session_state.current_sheet].iloc[row_idx, col_idx]
+        
+        if not val_to_move.strip():
+            st.sidebar.error("Vị trí nguồn đang trống!")
+        else:
+            # Chuyển giá trị
+            all_sheets[st.session_state.current_sheet].iloc[row_idx, col_idx] = ""
+            all_sheets[t_sheet].iloc[t_row, t_col] = val_to_move
+            save_all_sheets_data(all_sheets)
+            st.sidebar.success(f"Đã chuyển '{val_to_move}' thành công!")
+            st.rerun()
+
+elif crud_action == "Xóa / Xuất hàng":
+    if st.sidebar.button("🗑️ Xuất Hàng Khỏi Vị Trí", use_container_width=True):
+        all_sheets = {s: load_sheet_data(s) for s in sheets}
+        all_sheets[st.session_state.current_sheet].iloc[row_idx, col_idx] = ""
+        save_all_sheets_data(all_sheets)
+        st.sidebar.success(f"Đã xóa hàng tại Dòng {row_idx+1}, Cột {col_idx+1}")
+        st.rerun()
 
 # 5. Dashboard Stats Header
 total_cells = df.shape[0] * df.shape[1]
